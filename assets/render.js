@@ -46,6 +46,14 @@
     return wrap;
   }
 
+  function renderList(block) {
+    var ul = el("ul", "bullet-list");
+    block.items.forEach(function (text) {
+      ul.appendChild(el("li", null, esc(text)));
+    });
+    return ul;
+  }
+
   function renderEdu(block) {
     var list = el("ul", "edu-list");
     block.items.forEach(function (e) {
@@ -57,7 +65,7 @@
     return list;
   }
 
-  function renderCardItem(item, fields, gridMode) {
+  function renderCardItem(item, fields) {
     var card = el("article", "card");
     Object.keys(fields).forEach(function (key) {
       var role = fields[key];
@@ -74,7 +82,7 @@
   function renderCards(block) {
     var wrap = el("div", block.type === "cardgrid" ? "cardgrid" : "cards");
     block.items.forEach(function (item) {
-      wrap.appendChild(renderCardItem(item, block.fields, block.type === "cardgrid"));
+      wrap.appendChild(renderCardItem(item, block.fields));
     });
     return wrap;
   }
@@ -83,21 +91,12 @@
     switch (block.type) {
       case "paragraphs": return renderParagraphs(block);
       case "chips": return renderChips(block);
+      case "list": return renderList(block);
       case "edu": return renderEdu(block);
       case "cards":
       case "cardgrid": return renderCards(block);
       default: return el("div", null, "未知区块类型：" + block.type);
     }
-  }
-
-  /* ---------- 区块（带标题） ---------- */
-
-  function renderSideBlock(block) {
-    if (!hasItems(block)) return null;
-    var box = el("div", "side-block");
-    box.appendChild(el("h2", null, esc(block.title)));
-    box.appendChild(renderBlockBody(block));
-    return box;
   }
 
   function renderSection(block) {
@@ -120,11 +119,9 @@
     return section;
   }
 
-  /* ---------- 左栏：头像/姓名 + 联系 ---------- */
+  /* ---------- 居中线头 ---------- */
 
-  var sidebar = el("aside", "sidebar");
-
-  var hero = el("div", "hero");
+  var hero = el("header", "hero");
   if (data.profile.avatar) {
     var avatar = el("img", "avatar");
     avatar.src = data.profile.avatar;
@@ -142,25 +139,14 @@
   emailLink.setAttribute("data-email", data.profile.emailBase64);
   contact.appendChild(emailLink);
   hero.appendChild(contact);
-  sidebar.appendChild(hero);
+  app.appendChild(hero);
 
-  data.sidebar.forEach(function (block) {
-    var node = renderSideBlock(block);
-    if (node) sidebar.appendChild(node);
-  });
+  /* ---------- 正文区块（单栏，按 sections 顺序） ---------- */
 
-  /* ---------- 右栏 ---------- */
-
-  var main = el("main", "main-content");
   data.sections.forEach(function (block) {
     var node = renderSection(block);
-    if (node) main.appendChild(node);
+    if (node) app.appendChild(node);
   });
-
-  var layout = el("div", "layout");
-  layout.appendChild(sidebar);
-  layout.appendChild(main);
-  app.appendChild(layout);
 
   /* ---------- 页脚声明 ---------- */
 
@@ -172,7 +158,7 @@
   /* ---------- 邮箱混淆解码 ---------- */
 
   var address = atob(emailLink.getAttribute("data-email"));
-  emailLink.textContent = address;
+  emailLink.textContent = address.replace("@", "#");
   emailLink.href = "mailto:" + address;
   emailLink.removeAttribute("data-email");
 })();

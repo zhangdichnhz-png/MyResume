@@ -4,22 +4,22 @@
 - Personal resume published as a static site via GitHub Pages at `https://zhangdichnhz-png.github.io/` (repo `zhangdichnhz-png.github.io`, served from `main` branch root).
 - Zero build, zero dependencies: plain `index.html` + files under `assets/`. No package manifest, framework, build script, test suite, linter, or CI — do not invent or run build/test/lint commands.
 - `README.md` is the content draft/source of truth for facts; the site renders from data. **Content edits must be kept in sync between `README.md` and `assets/resume-data.js`.**
-- All content is in Simplified Chinese. Make edits in Chinese and match the existing section structure: 联系方式 / 个人简介（概述·教育·资质）/ 主要成果（代表论文、代表专利、参与项目、获奖信息）/ 声明.
+- All content is in Simplified Chinese. Make edits in Chinese and match the existing section structure: 个人简介（圆点列表：教育 / 职务 / 职称 / 专家身份 / 成果产出，无独立教育或资质区块）/ 主要成果（代表论文、代表专利、参与项目、获奖信息）/ 声明.
 
 ## File layout
-- `index.html` — thin shell: head (meta, inline SVG favicon, CSS link) + `<div id="app">` + two `<script>` tags. Do not edit unless changing page shell.
-- `assets/resume-data.js` — **the only file to edit for any content change**: one `window.RESUME_DATA` object (profile / sidebar[] / sections[] / declaration).
-- `assets/render.js` — vanilla JS generic renderer. Reads blocks from data and dispatches by `type`; blocks with empty/missing `items` are skipped entirely. Edit only to add a brand-new layout type.
+- `index.html` — thin shell: head (meta, inline SVG favicon, Open Graph share tags, CSS link) + `<div id="app">` + two `<script>` tags. Do not edit unless changing page shell or share-card metadata (`og:title` / `og:description` / `og:image`).
+- `assets/resume-data.js` — **the only file to edit for any content change**: one `window.RESUME_DATA` object (profile / sections[] / declaration).
+- `assets/render.js` — vanilla JS generic renderer. Renders a centered hero (avatar / name / tagline / email) then dispatches each block by `type`; blocks with empty/missing `items` are skipped entirely. Edit only to add a brand-new layout type.
 - `assets/avatar.jpg` — profile photo (referenced by `profile.avatar`; replace the file to change it).
-- `assets/style.css` — all styles via CSS variables (`--accent`, `--text`, etc.). Two-column sidebar, card grids, chips, mobile stacking (`max-width: 760px`), A4 print styles.
+- `assets/style.css` — all styles via CSS variables (`--accent`, `--text`, etc.). Single-column centered layout, card grids, chips/bullet lists, mobile stacking (`max-width: 600px`, patent grid → single column), A4 print styles.
 
 ## Data model (`resume-data.js`)
 - `profile`: `{ name, title, fields, emailBase64, avatar }` — name, job title line, research-fields line, obfuscated email, avatar path (`""` hides it).
-- `sidebar`: array of blocks rendered in the left column.
-- `sections`: array of blocks rendered in the right column (array order = page order).
+- `sections`: array of blocks rendered in the single main column (array order = page order).
 - Block shapes:
   - `{ title, type: "paragraphs", items: ["段落", ...] }`
-  - `{ title, type: "chips", items: ["标签", ...] }`
+  - `{ title, type: "list", items: ["条目", ...] }` — normal-size bulleted list (used by 专业资质).
+  - `{ title, type: "chips", items: ["标签", ...] }` — small pill tags.
   - `{ title, type: "edu", items: [{ school, major, degree }, ...] }`
   - `{ title, type: "cards" | "cardgrid", fields: { <字段名>: <角色> }, items: [{...}, ...] }`
   - `{ title, type: "group", blocks: [ <上面任意 block>, ... ] }` — renders h2 + h3 sub-blocks (used by 主要成果).
@@ -34,13 +34,14 @@
    - patent: `{ name: "...", no: "CN123456789B", date: "授权 2024-01-01" }`
    - project: `{ program: "...计划", name: "...项目", code: "编号" }`
    - award: `{ name: "奖项名称", org: "颁发机构", year: "2024" }`
-   - edu: `{ school: "...", major: "...", degree: "..." }`
-   - qualification: just a string in the `chips` block's `items`.
+   - edu: edit the 1st bullet in the 个人简介 `list` block (education is written into the intro list, not a separate section; an `edu` block type still exists in the renderer if ever needed).
+   - qualification / title: edit the 3rd bullet in the 个人简介 `list` block (qualifications are written into the intro list, not a separate section).
 2. Add the same fact as a bullet under the matching heading in `README.md`.
 3. Save and refresh the browser — no build step.
 
 ### Add a whole new section (e.g. 著作 / 社会兼职 / 培训经历) — no code needed
-1. In `resume-data.js`, copy an existing block inside `sections` (right column) or `sidebar` (left column), then change `title`, `type`, `fields`, and `items`. Templates:
+1. In `resume-data.js`, copy an existing block inside `sections`, then change `title`, `type`, `fields`, and `items`. Templates:
+   - Bulleted list: `{ title: "...", type: "list", items: ["..."] }`
    - Single-column cards: `{ title: "著作", type: "cards", fields: { name: "title", publisher: "muted", year: "badge" }, items: [] }`
    - Two-column compact grid: same with `type: "cardgrid"`.
    - Tag chips: `{ title: "社会兼职", type: "chips", items: ["..."] }`
@@ -58,6 +59,7 @@
 ### Change the email address
 - Generate base64 (PowerShell): `[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("new@example.com"))` (or `btoa("new@example.com")` in a browser console).
 - Replace `profile.emailBase64`. Never put plaintext email in HTML/JS source; `render.js` decodes it at load time.
+- The on-screen address is display-masked (`@` rendered as `#`, e.g. `zhangdichnhz#gmail.com`); the `mailto:` href still uses the real decoded address. To change the mask style, edit the `address.replace("@", "#")` line in `render.js`.
 
 ### Change colors / style
 - Edit the CSS variables at the top of `assets/style.css`. Do not add web fonts or CDN resources.
@@ -69,5 +71,5 @@
 
 ## Verification (after every edit)
 1. `node --check assets/resume-data.js` and `node --check assets/render.js`.
-2. Open `index.html` directly in a browser: two-column layout, narrow-width (mobile) stacking, Ctrl+P print preview, and that the email link reveals the address and opens a mail client. Empty placeholder sections (e.g. 荣誉与获奖) must NOT appear.
+2. Open `index.html` directly in a browser: centered hero, single-column layout, narrow-width (mobile) rendering (patent grid collapses to one column), Ctrl+P print preview, and that the email link reveals the address and opens a mail client. Empty placeholder sections (e.g. 荣誉与获奖) must NOT appear.
 3. Re-read `resume-data.js` against `README.md` to confirm no factual entry (patent numbers, dates, codes) was altered.
